@@ -4,14 +4,34 @@ import cv2
 import numpy as np
 
 
-# uMax = 640  # w
-# vMax = 480  # h
-
+def read_intrinsics_text(path):
+    """
+    Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
+    """
+    cameras = {}
+    with open(path, "r") as fid:
+        while True:
+            line = fid.readline()
+            if not line:
+                break
+            line = line.strip()
+            if len(line) > 0 and line[0] != "#":
+                elems = line.split()
+                camera_id = int(elems[0])
+                model = elems[1]
+                assert model == "PINHOLE", "While the loader support other types, the rest of the code assumes PINHOLE"
+                width = int(elems[2])
+                height = int(elems[3])
+                params = np.array(tuple(map(float, elems[4:])))
+                cameras = {"width": width, "height": height, "params": params}
+                break
+    return cameras
 
 def get_cam_params(calib_path):
     with open(calib_path, 'r') as f:
         data = f.read()
-        params = list(map(int, (data.split())))[:-1]
+        params = list(map(float, (data.split())))[:-1]
+        
     return params
 
 
@@ -24,10 +44,10 @@ def get_normal_gt(normal_path):
 
 
 def get_depth(depth_path, height, width):
-    with open(depth_path, 'rb') as f:
-        data_raw = struct.unpack('f' * width * height, f.read(4 * width * height))
-        z = np.array(data_raw).reshape(height, width)
-
+    # with open(depth_path, 'rb') as f:
+    #     data_raw = struct.unpack('f' * width * height, f.read(4 * width * height))
+    #     z = np.array(data_raw).reshape(height, width)
+    z = np.load(depth_path).reshape(height, width)
     # create mask, 1 for foreground, 0 for background
     mask = np.ones_like(z)
     mask[z == 1] = 0
